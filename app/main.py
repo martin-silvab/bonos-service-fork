@@ -53,11 +53,27 @@ class ReclamarRequest(BaseModel):
     monto_base: float = Field(default=0, ge=0, description="Base para bonos por porcentaje")
 
 
-# TODO (alumno): implementar las rutas de salud que usará Kubernetes:
-#   - liveness: ¿el proceso está vivo? (respuesta simple).
-#   - readiness: ¿está listo para recibir tráfico? Debe verificar la BD.
-# Luego configurar livenessProbe/readinessProbe en el Deployment de EKS.
+@app.get("/livez")
+def liveness():
 
+    return {"status": "ok", "service": "bonos-service"}
+
+
+@app.get("/readyz")
+def readiness():
+    try:
+        with conexion() as conn:
+            with dict_cursor(conn) as cur:
+                cur.execute("SELECT 1 AS ok")
+                cur.fetchone()
+
+        return {"status": "ready", "database": "ok", "service": "bonos-service"}
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Servicio no listo: no se pudo conectar a PostgreSQL ({exc})",
+        )
 
 @app.get("/api/bonos")
 def listar_bonos():
